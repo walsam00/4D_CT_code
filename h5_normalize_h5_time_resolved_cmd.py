@@ -5,8 +5,6 @@
 import h5py
 import tomopy
 import tomopy.util.dtype as dtype
-
-import matplotlib.pyplot as plt
 import numpy as np
 import getopt, sys
 
@@ -14,17 +12,19 @@ fdir_in = ''
 fdir_out = ''
 f_name = ''
 
-batch_stop = 2500 #5000 #arbitrary batch size, 1/10 of images -> adjust according to RAM availability
-width = 2016 #1536 #2016
-height = 1800 #760 #1800
+batch_stop = 2500 #arbitrary batch size -> adjust according to RAM availability
+width = 2016 
+height = 1800
 depth = 27500
 batch_max = 11
 
+#get program parameters from command line options
+#this code is run from a SLURM script, so this is a handy way of populating the variables
 full_cmd_arguments = sys.argv
 argument_list = full_cmd_arguments[1:]
 
-short_options = "i:o:n:s:m:w:e:d:h"
-long_options = ["fdir_in=", "fdir_out", "f_name=", "batch_size=", "batch_max=", "width=", "height=", "depth=", "help"]
+short_options = "i:o:n:s:m:w:e:d:"
+long_options = ["fdir_in=", "fdir_out", "f_name=", "batch_size=", "batch_max=", "width=", "height=", "depth="]
 
 try:
 	arguments, values = getopt.getopt(argument_list, short_options, long_options)
@@ -34,30 +34,28 @@ except getopt.error as err:
 
 for current_argument, current_value in arguments:
 	if current_argument in ("-i", "--fdir_in"):
-		fdir_in = str(current_value)
+		fdir_in = str(current_value)    #for example "/base_filepath/Raw_Data/N10_w_01/"
 		print(fdir_in)
 	if current_argument in ("-o", "--fdir_out"):
-		fdir_out = str(current_value)
+		fdir_out = str(current_value)   #for example "/base_filepath/Reconstructions/N10_w_01/"
 		print(fdir_out)
 	if current_argument in ("-n", "--f_name"):
-		f_name = str(current_value)
+		f_name = str(current_value)     #for example "N10_w_01"
 		print(f_name)
 	if current_argument in ("-s", "--batch_size"):
-		batch_stop = int(current_value)
+		batch_stop = int(current_value) #for example "500"
 	if current_argument in ("-m", "--batch_max"):
-		batch_max = int(current_value)
+		batch_max = int(current_value)  #for exampe "55"
 	if current_argument in ("-w", "--width"):
-		width = int(current_value)
+		width = int(current_value)      #for example "2016"
 	if current_argument in ("-e", "--height"):
-		height = int(current_value)
+		height = int(current_value)     #for example "1800"
 	if current_argument in ("-d", "--depth"):
-		depth = int(current_value)
-
-	if current_argument in ("-h", "--help"):
-		print("Normalizes a .h5 file. -fi --fdir_in specifies input directory, -fo --fdir_out specifies output directory, -fn --f_name specifies file name (w/o file extention)")
+		depth = int(current_value)      #for example "27500"
 
 batch_increment = batch_stop
 
+#read acquisition log file
 energy = 'Not found'
 delta = 'Not found'
 beta = 'Not found'
@@ -89,90 +87,36 @@ for line in log_line:
 		#nangles = int(line_split[-1])
 log.close()
 
-###normalize###
+#normalize
 print('Loading files for normalization: ', fdir_in, f_name)
-
-method = 'FBP_CUDA'
-start = 0
-end = int(no_projections)
-theta = None
-proj = None
-flat = None
-dark = None
-nangles = 180
-
-#Image dimensions of the time resolved scans: 2016x1800, 17'500 projections (N19_w_02)
-#To Do: Batch the loading and normalizing (to prevent out of memory crashes) -> done in batches
 
 batch = 1	#current batch
 batch_start = 0
 
-### for testing: only normalize & save 1 timepoint ###
-# batch_start = 0
-# batch_stop = 500
-# depth = 500
-# batch_max = 1
-######################################################
-
-#try:
+#create output file
 with h5py.File(fdir_out + 'output.h5', 'a') as hdf:
 	dset = hdf.create_dataset('normalized', (depth, height, width), dtype = 'float32', chunks=True)
-#except:
-#	print('failed to create output file template')
 
+#read raw data
 with h5py.File(fdir_in + f_name+'.h5', 'r') as hdf:
 	f = hdf['exchange/data_white']
 	flat = np.array(f)
 	d = hdf['exchange/data_dark']
 	dark = np.array(d)
 
+#normalize & save output
 while batch <= batch_max:
 	print('working on batch ', str(batch), ' out of ', str(batch_max))
 	with h5py.File(fdir_in + f_name+'.h5', 'r') as hdf:
 		p = hdf['exchange/data']
 		proj = np.array(p[batch_start:batch_stop, :, :])
-	#theta = tomopy.angles(proj.shape[0], 0, nangles)
-
-	###plt.imshow(proj[0, :, :], cmap='Greys_r')
-	###plt.show()
-
-	#if (theta is None):
-	#	theta = tomopy.angles(proj.shape[0])
-	#else:
-	#	pass
-
-	#normalize
 
 	print('Normalizing')
 	proj = tomopy.normalize(proj, flat, dark, ncore=10)
-	###plt.imshow(proj[0, :, :], cmap='Greys_r')
-	###plt.show()
 	print(proj.dtype)
 
-	#plt.imshow(proj[0, :, :])
-	#plt.show()
-
-	#print(proj.dtype)
-	#proj
-	# if proj_height > 2100:
-		# proj_out_height = 2100
-	# else:
-	# if proj_height > 525:
-		# proj_out_height = 525
-	# if proj_width*2 > 5000:.
-		# proj_out_width = 5000
-	# else:
-		# if proj_width*2 > 1250:
-		# proj_out_width = 1250
-
-	### !!!!!!!!!!!! ###
-	# batch_start = 0
-	# batch_stop = 500
-	####################
-
 	print('Saving normalized projections')
-	###plt.imshow(proj[0, :, :], cmap='Greys_r')
-	###plt.show()
+
 	with h5py.File(fdir_out+'output.h5', 'a') as hdf:
 		hdf['normalized'][batch_start:batch_stop, :, :] = proj
 
