@@ -118,7 +118,7 @@ while batch_current < batch_total:
     
     #perform actual reconstruction on GPU
 	print("Reconstructing with " + str(method))
-	extra_options = {}#{'MinConstraint':0}
+	extra_options = {}
 	options = {'proj_type':'cuda', 'method':method, 'gpu_List': [1], 'extra_options':extra_options}
 	recon = tomopy.recon(proj, theta, center=rot_center, algorithm=tomopy.astra, ncore=1, options=options)
 
