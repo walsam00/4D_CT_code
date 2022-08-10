@@ -3,6 +3,7 @@ This repository exists in conjunction with a (future) publication (DOI, link) to
 The code is used to reconstruct and segment a specific set of 4D micro-computed tomography raw data. For further details on the data refer to the publication.
 
 Package versions:
+
 python          3.6.11
 
 astra toolbox   1.9.9.dev4
