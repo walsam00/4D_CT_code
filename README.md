@@ -1,5 +1,5 @@
 # 4D_CT_code
-This repository exists in conjunction with a (future) publication (DOI, link) to make the code created for that work publicly available.
+This repository exists in conjunction with a publication https://doi.org/10.1016%2Fj.heliyon.2024.e26025 to make the code created for that work publicly available.
 The code is used to reconstruct and segment a specific set of 4D micro-computed tomography raw data. For further details on the data refer to the publication.
 Typical order of operations:
 normalization -> paganin filter -> reconstruction -> binning -> segmentation using U-Net -> further analysis / visualization
